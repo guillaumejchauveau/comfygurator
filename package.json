@@ -1,0 +1,30 @@
+{
+  "name": "comfygurator",
+  "version": "1.0.0-alpha.2",
+  "description": "Comfygurator",
+  "author": "Guillaume Chauveau <guillaumejchauveau.ops.gecu@outlook.com>",
+  "license": "ISC",
+  "main": "lib/index",
+  "types": "lib/index",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "test": "ava"
+  },
+  "devDependencies": {
+    "@types/node": "^12.0.0",
+    "ava": "^1.4.1",
+    "typescript": "^3.4.5"
+  },
+  "dependencies": {
+    "dott": "^1.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guillaumejchauveau/comfygurator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/guillaumejchauveau/comfygurator/issues"
+  },
+  "homepage": "https://github.com/guillaumejchauveau/comfygurator"
+}
