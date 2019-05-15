@@ -5,6 +5,7 @@ import HydratedPropertyError from './HydratedPropertyError'
 import ObjectValue from './ObjectValue'
 
 export type PropertyKey = Path
+export type PropertyValue<T> = ObjectValue<T> | ComputedValue<T> | T
 export namespace PropertyKey {
   /**
    * Formats a property key as a string.
@@ -12,71 +13,59 @@ export namespace PropertyKey {
    * @param {PropertyKey} key The property key to format.
    * @returns {String}
    */
-  export function format(key: PropertyKey): string {
-    return <string>Path.format(key, {pathFormat: Path.Formats.String})
+  export function format (key: PropertyKey): string {
+    return <string>Path.format(key, { pathFormat: Path.Formats.String })
   }
 }
 
-export interface PropertyData {
+export interface PropertyData<T> {
   key: PropertyKey,
-  typeChecker?: (request: any) => boolean,
+  typeChecker?: (request: PropertyValue<T>) => boolean,
   required?: boolean
 }
 
-export default class Property {
+export default class Property<T> {
   readonly key: string
-  private _value: any
-  private _required: boolean
+  readonly typeChecker: (request: T) => boolean
 
-  constructor(
+  constructor (
     key: PropertyKey,
-    readonly typeChecker=(request: any) => true,
-    required=true
+    typeChecker = (request: PropertyValue<T>) => true,
+    required = true
   ) {
     this.key = PropertyKey.format(key)
     this._value = undefined
     this._required = required
+    this.typeChecker = typeChecker
   }
 
-  get required(): boolean {
-    return this._required
-  }
+  private _value: PropertyValue<T> | undefined
 
-  require() {
-    this._required = true
-  }
-
-  get hydrated(): boolean {
-    return this._value !== undefined
-  }
-
-  get status(): boolean {
-    return this.hydrated || !this.required
-  }
-
-  get value(): any {
+  get value (): PropertyValue<T> {
     if (this.required && !this.hydrated) {
       throw new NonHydratedPropertyError(this)
     }
-
-    return this._value
+    return <PropertyValue<T>>this._value
   }
 
-  set value(request: any) {
+  set value (request: PropertyValue<T>) {
     if (this.hydrated) {
       throw new HydratedPropertyError(this)
     }
+    this._value = request
+  }
 
-    if (
-      request instanceof ObjectValue && this.typeChecker(request.value) ||
-      request instanceof ComputedValue ||
-      this.typeChecker(request)
-    ) {
-      this._value = request
-    } else {
-      throw new TypeError(
-        `Value requested for property '${this.key}' has invalid type`
-      )
-    }
+  private _required: boolean
+
+  get required (): boolean {
+    return this._required
+  }
+
+  get hydrated (): boolean {
+    return this._value !== undefined
+  }
+
+  require () {
+    this._required = true
   }
 }

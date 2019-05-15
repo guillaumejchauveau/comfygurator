@@ -1,12 +1,11 @@
 import DotT, { Path as DotTPath } from 'dott'
 
-import Property, { PropertyKey, PropertyData } from './Property'
+import Property, { PropertyData, PropertyKey, PropertyValue } from './Property'
 import ComputedValue, { Context as CVContext } from './ComputedValue'
 import ObjectValue from './ObjectValue'
 import DuplicatePropertyError from './DuplicatePropertyError'
 import RelatedPropertiesError from './RelatedPropertiesError'
 import UnknownPropertyError from './UnknownPropertyError'
-import HydratedPropertyError from './HydratedPropertyError'
 
 export default class Schema {
   /**
@@ -18,12 +17,28 @@ export default class Schema {
    * Registered properties.
    */
   private readonly properties: {
-    [propertyKey: string]: Property
+    [propertyKey: string]: Property<any>
   }
 
-  static fromArray(
-    propertiesData: PropertyData[],
-    defaultData={},
+  /**
+   * Creates a Schema. A Schema can be used to describe the properties, of an
+   * object, required or not. The values for each properties must be hydrated to
+   * obtain the final object.
+   *
+   * @param {Array<Function>} excludedConstructors Constructors excluded for DotT operations.
+   */
+  constructor (excludedConstructors?: Function[]) {
+    this.exclude = [ComputedValue, ObjectValue, ...(excludedConstructors || [])]
+    this.properties = {}
+  }
+
+  get propertyKeys (): string[] {
+    return Object.keys(this.properties)
+  }
+
+  static fromArray (
+    propertiesData: PropertyData<any>[],
+    defaultData = {},
     excludedConstructors?: Function[]
   ): Schema {
     const schema = new Schema(excludedConstructors)
@@ -42,27 +57,11 @@ export default class Schema {
     return schema
   }
 
-  /**
-   * Creates a Schema. A Schema can be used to describe the properties, of an
-   * object, required or not. The values for each properties must be hydrated to
-   * obtain the final object.
-   *
-   * @param {Array<Function>} excludedConstructors Constructors excluded for DotT operations.
-   */
-  constructor(excludedConstructors?: Function[]) {
-    this.exclude = [ComputedValue, ObjectValue, ...(excludedConstructors || [])]
-    this.properties = {}
-  }
-
-  hasProperty(propertyKey: PropertyKey): boolean {
+  hasProperty (propertyKey: PropertyKey): boolean {
     return this.properties.hasOwnProperty(PropertyKey.format(propertyKey))
   }
 
-  get propertyKeys(): string[] {
-    return Object.keys(this.properties)
-  }
-
-  addProperty(property: Property) {
+  addProperty (property: Property<any>) {
     if (this.hasProperty(property.key)) {
       throw new DuplicatePropertyError(property)
     }
@@ -76,7 +75,7 @@ export default class Schema {
     this.properties[property.key] = property
   }
 
-  hydrate(requestTree: object) {
+  hydrate (requestTree: object) {
     const requestTreeNav = new DotT(requestTree, {
       pathType: DotTPath.Types.Leaf,
       exclude: this.exclude
@@ -89,21 +88,16 @@ export default class Schema {
     }
   }
 
-  hydrateProperty(propertyKey: PropertyKey, request: any) {
+  hydrateProperty (propertyKey: PropertyKey, request: PropertyValue<any>) {
     if (!this.hasProperty(propertyKey)) {
       throw new UnknownPropertyError(propertyKey)
     }
 
     const property = this.properties[PropertyKey.format(propertyKey)]
-
-    if (property.hydrated) {
-      throw new HydratedPropertyError(property)
-    }
-
     property.value = request
   }
 
-  compute(context?: CVContext): object {
+  compute (context?: CVContext): object {
     const computedPropertiesNav = new DotT(
       new Object(),
       {
@@ -130,7 +124,11 @@ export default class Schema {
       } else if (value instanceof ObjectValue) {
         value = value.value
       }
-
+      if (!property.typeChecker(value)) {
+        throw new TypeError(
+          `Value requested for property '${property.key}' has invalid type`
+        )
+      }
       computedPropertiesNav.put(property.key, value)
     }
 

@@ -27,7 +27,7 @@ module.exports = {
   propertiesData,
   propertyKeys,
   A: class {
-    constructor() {
+    constructor () {
       this.test = 'a'
     }
   }

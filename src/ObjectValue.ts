@@ -1,4 +1,4 @@
-export default class ObjectValue {
-  constructor(readonly value: object) {
+export default class ObjectValue<T> {
+  constructor (readonly value: T) {
   }
 }
