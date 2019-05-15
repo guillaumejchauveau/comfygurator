@@ -12,7 +12,7 @@ import ComputedValue from '../lib/ComputedValue'
 import ObjectValue from '../lib/ObjectValue'
 
 test('schema', t => {
-  const sch = new Schema([A.constructor])
+  const sch = new Schema([A])
   sch.addProperty(new Property('foo.bar', request => typeof request === 'string'))
 
   t.throws(function () {
@@ -118,7 +118,7 @@ test('schema from array', t => {
       }
     })
   }, UnknownPropertyError)
-  const sch2 = new Schema([A.constructor])
+  const sch2 = new Schema([A])
   sch2.addProperty(new Property('foo'))
   t.notThrows(function () {
     sch2.hydrate({
