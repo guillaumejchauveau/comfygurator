@@ -1,7 +1,7 @@
 import DotT, { Path as DotTPath } from 'dott'
 
 import Property, { PropertyData, PropertyKey, PropertyValue } from './Property'
-import ComputedValue, { Context as CVContext } from './ComputedValue'
+import ComputedValue from './ComputedValue'
 import ObjectValue from './ObjectValue'
 import DuplicatePropertyError from './DuplicatePropertyError'
 import RelatedPropertiesError from './RelatedPropertiesError'
@@ -97,7 +97,7 @@ export default class Schema {
     property.value = request
   }
 
-  compute (context?: CVContext): object {
+  compute (context?: any): object {
     const computedPropertiesNav = new DotT(
       new Object(),
       {

@@ -5,7 +5,7 @@ import HydratedPropertyError from './HydratedPropertyError'
 import ObjectValue from './ObjectValue'
 
 export type PropertyKey = Path
-export type PropertyValue<T> = ObjectValue<T> | ComputedValue<T> | T
+export type PropertyValue<T> = ObjectValue<T> | ComputedValue<T, any> | T
 export namespace PropertyKey {
   /**
    * Formats a property key as a string.

@@ -1,12 +1,8 @@
-export interface Context {
-
-}
-
-export default class ComputedValue<T> {
-  constructor (protected readonly computer: (context: Context) => T) {
+export default class ComputedValue<T, C> {
+  constructor (protected readonly computer: (context: C) => T) {
   }
 
-  compute (context: Context): T {
+  compute (context: C): T {
     return this.computer(context)
   }
 }
