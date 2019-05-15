@@ -30,7 +30,7 @@ export default class Property<T> {
 
   constructor (
     key: PropertyKey,
-    typeChecker = (request: PropertyValue<T>) => true,
+    typeChecker = (request: T) => true,
     required = true
   ) {
     this.key = PropertyKey.format(key)
