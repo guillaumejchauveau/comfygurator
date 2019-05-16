@@ -9,10 +9,9 @@ import DuplicatePropertyError from '../lib/DuplicatePropertyError'
 import RelatedPropertiesError from '../lib/RelatedPropertiesError'
 import UnknownPropertyError from '../lib/UnknownPropertyError'
 import ComputedValue from '../lib/ComputedValue'
-import ObjectValue from '../lib/ObjectValue'
 
 test('schema', t => {
-  const sch = new Schema([A])
+  const sch = new Schema()
   sch.addProperty(new Property('foo.bar', request => typeof request === 'string'))
 
   t.throws(function () {
@@ -83,47 +82,25 @@ test('schema from array', t => {
       webpack: {
         port: 'b',
         historyApiFallback: 'c'
-      }
-    })
-  })
-  t.throws(function () {
-    sch.hydrate({
+      },
       paths: {
         output: {
           path: {
             bar: 'd'
           }
         }
-      }
-    })
-  }, UnknownPropertyError)
-  t.notThrows(function () {
-    sch.hydrate({
-      paths: {
-        output: {
-          path: new ObjectValue({
-            bar: 'd'
-          })
-        }
-      }
+      },
+      unknown: true
     })
   })
 
-  t.throws(function () {
-    sch.hydrate({
-      paths: {
-        output: {
-          publicPath: new A()
-        }
-      }
-    })
-  }, UnknownPropertyError)
-  const sch2 = new Schema([A])
+  const sch2 = new Schema()
   sch2.addProperty(new Property('foo'))
   t.notThrows(function () {
     sch2.hydrate({
       foo: new A()
     })
+    sch2.compute()
   })
 
   sch.hydrateProperty(propertiesData[4].key, 42)

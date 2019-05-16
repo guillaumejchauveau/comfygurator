@@ -2,18 +2,12 @@ import DotT, { Path as DotTPath } from 'dott'
 
 import Property, { PropertyData, PropertyKey, PropertyValue } from './Property'
 import ComputedValue from './ComputedValue'
-import ObjectValue from './ObjectValue'
 import DuplicatePropertyError from './DuplicatePropertyError'
 import RelatedPropertiesError from './RelatedPropertiesError'
 import UnknownPropertyError from './UnknownPropertyError'
 import StringTemplateValue from './StringTemplateValue'
 
 export default class Schema {
-  /**
-   * Constructors excluded for DotT operations.
-   */
-  private readonly exclude: Function[]
-
   /**
    * Registered properties.
    */
@@ -25,11 +19,8 @@ export default class Schema {
    * Creates a Schema. A Schema can be used to describe the properties, of an
    * object, required or not. The values for each properties must be hydrated to
    * obtain the final object.
-   *
-   * @param {Array<Function>} excludedConstructors Constructors excluded for DotT operations.
    */
-  constructor (excludedConstructors?: Function[]) {
-    this.exclude = [ComputedValue, ObjectValue, ...(excludedConstructors || [])]
+  constructor () {
     this.properties = {}
   }
 
@@ -39,10 +30,9 @@ export default class Schema {
 
   static fromArray (
     propertiesData: PropertyData<any>[],
-    defaultData = {},
-    excludedConstructors?: Function[]
+    defaultData = {}
   ): Schema {
-    const schema = new Schema(excludedConstructors)
+    const schema = new Schema()
 
     for (let propertyData of propertiesData) {
       propertyData = Object.assign({}, defaultData, propertyData)
@@ -78,14 +68,14 @@ export default class Schema {
 
   hydrate (requestTree: object) {
     const requestTreeNav = new DotT(requestTree, {
-      pathType: DotTPath.Types.Leaf,
-      exclude: this.exclude
+      pathType: DotTPath.Types.Leaf
     })
-    const propertyKeys = requestTreeNav.paths()
 
-    for (const propertyKey of propertyKeys) {
-      const request = requestTreeNav.get(propertyKey)[0]
-      this.hydrateProperty(propertyKey, request)
+    for (const propertyKey in this.properties) {
+      if (requestTreeNav.exists(propertyKey)) {
+        const request = requestTreeNav.get(propertyKey)[0]
+        this.hydrateProperty(propertyKey, request)
+      }
     }
   }
 
@@ -105,8 +95,7 @@ export default class Schema {
     const computedPropertiesNav = new DotT(
       new Object(),
       {
-        force: true,
-        exclude: this.exclude
+        force: true
       }
     )
 
@@ -125,8 +114,6 @@ export default class Schema {
             `Computed value requested for property '${property.key}' returns invalid type`
           )
         }
-      } else if (value instanceof ObjectValue) {
-        value = value.value
       }
       if (!property.typeChecker(value)) {
         throw new TypeError(

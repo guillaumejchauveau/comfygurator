@@ -2,10 +2,9 @@ import { Path } from 'dott'
 import ComputedValue from './ComputedValue'
 import NonHydratedPropertyError from './NonHydratedPropertyError'
 import HydratedPropertyError from './HydratedPropertyError'
-import ObjectValue from './ObjectValue'
 
 export type PropertyKey = Path
-export type PropertyValue<T> = ObjectValue<T> | ComputedValue<T, any> | T
+export type PropertyValue<T> = ComputedValue<T, any> | T
 export namespace PropertyKey {
   /**
    * Formats a property key as a string.
