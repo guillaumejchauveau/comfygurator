@@ -6,6 +6,7 @@ import ObjectValue from './ObjectValue'
 import DuplicatePropertyError from './DuplicatePropertyError'
 import RelatedPropertiesError from './RelatedPropertiesError'
 import UnknownPropertyError from './UnknownPropertyError'
+import StringTemplateValue from './StringTemplateValue'
 
 export default class Schema {
   /**
@@ -94,6 +95,9 @@ export default class Schema {
     }
 
     const property = this.properties[PropertyKey.format(propertyKey)]
+    if (StringTemplateValue.isStringTemplate(request)) {
+      request = new StringTemplateValue(request)
+    }
     property.value = request
   }
 
