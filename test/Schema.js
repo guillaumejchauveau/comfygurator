@@ -1,5 +1,5 @@
 import test from 'ava'
-import { A, propertiesData, propertyKeys } from './fixtures'
+import { A, propertiesData } from './fixtures'
 
 import Schema from '../lib/Schema'
 import Property from '../lib/Property'
@@ -67,12 +67,46 @@ test('schema', t => {
   t.notThrows(function () {
     sch.compute({})
   })
+
+  const schB = new Schema()
+  schB.addProperty(new Property(['foo', new RegExp('a'), 'bar']))
+  t.throws(function () {
+    schB.addProperty(new Property('foo.*'))
+  }, RelatedPropertiesError)
+  t.throws(function () {
+    schB.addProperty(new Property(['foo', new RegExp('a'), 'bar']))
+  }, RelatedPropertiesError)
+  t.notThrows(function () {
+    schB.addProperty(new Property('foo.*.baz'))
+    schB.hydrate({
+      foo: {
+        a: {
+          bar: 0,
+          baz: 1
+        },
+        b: {
+          bar: 2,
+          baz: 3
+        }
+      }
+    })
+    t.deepEqual(schB.compute(), {
+      foo: {
+        a: {
+          bar: 0,
+          baz: 1
+        },
+        b: {
+          baz: 3
+        }
+      }
+    })
+  })
 })
 
 test('schema from array', t => {
   const sch = Schema.fromArray(propertiesData)
 
-  t.deepEqual(sch.propertyKeys, propertyKeys)
   t.true(sch.hasProperty(propertiesData[4].key))
   t.notThrows(function () {
     sch.hydrate({

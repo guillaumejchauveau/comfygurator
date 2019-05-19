@@ -1,5 +1,6 @@
 import DotT, { Path as DotTPath } from 'dott'
 
+import DOTT_OPTIONS from './DotTOptions'
 import Property, { PropertyData, PropertyKey, PropertyValue } from './Property'
 import ComputedValue from './ComputedValue'
 import DuplicatePropertyError from './DuplicatePropertyError'
@@ -11,9 +12,7 @@ export default class Schema {
   /**
    * Registered properties.
    */
-  private readonly properties: {
-    [propertyKey: string]: Property<any>
-  }
+  private readonly properties: Map<PropertyKey, Property<any>>
 
   /**
    * Creates a Schema. A Schema can be used to describe the properties, of an
@@ -21,11 +20,11 @@ export default class Schema {
    * obtain the final object.
    */
   constructor () {
-    this.properties = {}
+    this.properties = new Map<PropertyKey, Property<any>>()
   }
 
-  get propertyKeys (): string[] {
-    return Object.keys(this.properties)
+  get propertyKeys (): Iterable<PropertyKey> {
+    return this.properties.keys()
   }
 
   static fromArray (
@@ -44,12 +43,11 @@ export default class Schema {
         )
       )
     }
-
     return schema
   }
 
   hasProperty (propertyKey: PropertyKey): boolean {
-    return this.properties.hasOwnProperty(PropertyKey.format(propertyKey))
+    return this.properties.has(propertyKey)
   }
 
   addProperty (property: Property<any>) {
@@ -57,72 +55,86 @@ export default class Schema {
       throw new DuplicatePropertyError(property)
     }
 
-    for (const propertyKey of this.propertyKeys) {
-      if (DotTPath.arePathsRelated(property.key, propertyKey)) {
-        throw new RelatedPropertiesError(property, this.properties[propertyKey])
+    for (const propertyEntry of this.properties) {
+      if (DotTPath.arePathsRelated(property.key, propertyEntry[0], DOTT_OPTIONS)) {
+        throw new RelatedPropertiesError(property, propertyEntry[1])
       }
     }
-
-    this.properties[property.key] = property
+    this.properties.set(property.key, property)
   }
 
   hydrate (requestTree: object) {
-    const requestTreeNav = new DotT(requestTree, {
-      pathType: DotTPath.Types.Leaf
-    })
+    const requestTreeNav = new DotT(requestTree, Object.assign(
+      {},
+      DOTT_OPTIONS,
+      {
+        enableSpecialParts: false,
+        pathType: DotTPath.Types.Any
+      }
+    ))
 
-    for (const propertyKey in this.properties) {
-      if (requestTreeNav.exists(propertyKey)) {
-        const request = requestTreeNav.get(propertyKey)[0]
-        this.hydrateProperty(propertyKey, request)
+    // Extracts all paths from the request tree and formats them for comparison.
+    const requestPaths = requestTreeNav.paths().map(path => DotTPath.format(path, DOTT_OPTIONS))
+    for (const propertyKey of this.properties.keys()) {
+      // Filters every path from the request tree that matches the current property.
+      for (const matchedPath of requestPaths.filter(requestPath =>
+        DotTPath.format(propertyKey, DOTT_OPTIONS).length === requestPath.length &&
+        DotTPath.arePathsRelated(propertyKey, requestPath, DOTT_OPTIONS)
+      )) {
+        this.hydrateProperty(
+          propertyKey,
+          requestTreeNav.get(matchedPath)[0],
+          <string>DotTPath.format(matchedPath, {
+            pathFormat: DotTPath.Formats.String
+          })
+        )
       }
     }
   }
 
-  hydrateProperty (propertyKey: PropertyKey, request: PropertyValue<any>) {
+  hydrateProperty (propertyKey: PropertyKey, request: PropertyValue<any>, realPropertyKey?: string) {
     if (!this.hasProperty(propertyKey)) {
       throw new UnknownPropertyError(propertyKey)
     }
 
-    const property = this.properties[PropertyKey.format(propertyKey)]
+    const property = this.properties.get(propertyKey)
     if (StringTemplateValue.isStringTemplate(request)) {
       request = new StringTemplateValue(request)
     }
-    property.value = request
+    (<Property<any>>property).setValue(request, realPropertyKey)
   }
 
   compute (context?: any): object {
     const computedPropertiesNav = new DotT(
       new Object(),
-      {
-        force: true
-      }
+      DOTT_OPTIONS
     )
 
-    for (const property of Object.values(this.properties)) {
-      let value = property.value
-      if (value instanceof ComputedValue) {
-        if (context === undefined) {
-          throw new Error(
-            `No context provided to compute the value of property '${property.key}'`
-          )
-        }
+    for (const property of this.properties.values()) {
+      for (const key of property.getRealKeys()) {
+        let value = property.getValue(key)
+        if (value instanceof ComputedValue) {
+          if (context === undefined) {
+            throw new Error(
+              `No context provided to compute the value of property '${key}'`
+            )
+          }
 
-        value = value.compute(context)
+          value = value.compute(context)
+          if (!property.typeChecker(value)) {
+            throw new TypeError(
+              `Computed value requested for property '${key}' returns invalid type`
+            )
+          }
+        }
         if (!property.typeChecker(value)) {
           throw new TypeError(
-            `Computed value requested for property '${property.key}' returns invalid type`
+            `Value requested for property '${key}' has invalid type`
           )
         }
+        computedPropertiesNav.put(key, value)
       }
-      if (!property.typeChecker(value)) {
-        throw new TypeError(
-          `Value requested for property '${property.key}' has invalid type`
-        )
-      }
-      computedPropertiesNav.put(property.key, value)
     }
-
     return computedPropertiesNav.value
   }
 }
