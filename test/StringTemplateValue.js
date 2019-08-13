@@ -1,5 +1,5 @@
 import test from 'ava'
-import StringTemplateValue, {StringTemplateContext} from '../lib/StringTemplateValue'
+import StringTemplateValue, { StringTemplateContext } from '../lib/StringTemplateValue'
 import Schema from '../lib/Schema'
 import Property from '../lib/Property'
 

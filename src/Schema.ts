@@ -7,6 +7,7 @@ import DuplicatePropertyError from './DuplicatePropertyError'
 import RelatedPropertiesError from './RelatedPropertiesError'
 import UnknownPropertyError from './UnknownPropertyError'
 import StringTemplateValue from './StringTemplateValue'
+import HydratedPropertyError from './HydratedPropertyError'
 
 export default class Schema {
   /**
@@ -63,7 +64,7 @@ export default class Schema {
     this.properties.set(property.key, property)
   }
 
-  hydrate (requestTree: object) {
+  hydrate (requestTree: object, ignoreDuplicate = true) {
     const requestTreeNav = new DotT(requestTree, Object.assign(
       {},
       DOTT_OPTIONS,
@@ -81,13 +82,19 @@ export default class Schema {
         DotTPath.format(propertyKey, DOTT_OPTIONS).length === requestPath.length &&
         DotTPath.arePathsRelated(propertyKey, requestPath, DOTT_OPTIONS)
       )) {
-        this.hydrateProperty(
-          propertyKey,
-          requestTreeNav.get(matchedPath)[0],
-          <string>DotTPath.format(matchedPath, {
-            pathFormat: DotTPath.Formats.String
-          })
-        )
+        try {
+          this.hydrateProperty(
+            propertyKey,
+            requestTreeNav.get(matchedPath)[0],
+            <string>DotTPath.format(matchedPath, {
+              pathFormat: DotTPath.Formats.String
+            })
+          )
+        } catch (e) {
+          if (!(e instanceof HydratedPropertyError && ignoreDuplicate)) {
+            throw e
+          }
+        }
       }
     }
   }

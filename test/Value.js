@@ -1,11 +1,8 @@
 import test from 'ava'
 
-import ComputedValue, { Context } from '../lib/ComputedValue'
+import ComputedValue from '../lib/ComputedValue'
 
 test('computed value', t => {
-  /**
-   * @implements {Context}
-   */
   const context = {
     foo: 'bar'
   }

@@ -34,7 +34,10 @@ export default class Property<T> {
       return [this.key]
     }
     if (this._value === undefined) {
-      throw new NonHydratedPropertyError(this)
+      if (this.required) {
+        throw new NonHydratedPropertyError(this)
+      }
+      return []
     }
     return (<Map<PropertyKey, PropertyValue<any>>>this._value).keys()
   }
